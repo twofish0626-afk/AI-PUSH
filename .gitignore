@@ -1,5 +1,8 @@
 node_modules/
 .next/
 data/ai-push.db
+data/ai-push.db-shm
+data/ai-push.db-wal
 .env.local
+.env*.local
 .DS_Store
