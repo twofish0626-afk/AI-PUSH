@@ -1,6 +1,6 @@
 # AI Push 运营工具
 
-百度网盘学习 Agent Push 文案批量生成工具。按月生成前台/后台 Push 文案，自动配置双端落地页链接，导出为 Excel/CSV。
+学习 Agent Push 文案批量生成工具。按月生成前台/后台 Push 文案，自动配置双端落地页链接，导出为 Excel/CSV。
 
 ## 快速开始
 
