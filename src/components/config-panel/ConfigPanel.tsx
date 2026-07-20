@@ -4,19 +4,13 @@ import { useConfigStore } from '@/stores/useConfigStore';
 import { usePushStore } from '@/stores/usePushStore';
 
 export function ConfigPanel() {
-  const { audiences, capabilities } = useConfigStore();
+  const { audiences } = useConfigStore();
   const {
     selectedMonth, setMonth,
-    audienceCapabilityMap, setAudienceCapability,
     selectedAudienceIds, setAudienceIds,
     examDescription, setExamDescription,
     customNode, setCustomNode,
   } = usePushStore();
-
-  const hasExamAudience = selectedAudienceIds.some(aid => {
-    const capId = audienceCapabilityMap[aid];
-    return capId && capabilities.find(c => c.id === capId)?.has_exam_params;
-  });
 
   const toggleAudience = (id: string) => {
     if (selectedAudienceIds.includes(id)) {
@@ -25,6 +19,10 @@ export function ConfigPanel() {
       setAudienceIds([...selectedAudienceIds, id]);
     }
   };
+
+  // Split audiences by group for display
+  const k12Auds = audiences.filter(a => a.name.includes('小学') || a.name.includes('初中') || a.name.includes('高中'));
+  const adultAuds = audiences.filter(a => !k12Auds.includes(a));
 
   return (
     <div className="p-4 space-y-5">
@@ -50,72 +48,82 @@ export function ConfigPanel() {
           type="text"
           value={customNode}
           onChange={(e) => setCustomNode(e.target.value)}
-          placeholder="如：高考冲刺、中考备战、暑假预习"
+          placeholder="如：暑假预习、开学摸底考、高考冲刺"
           className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent outline-none"
         />
       </div>
 
-      {/* Exam Description (only if any audience has exam capability) */}
-      {hasExamAudience && (
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            考试描述 <span className="text-gray-400 text-xs">e.g. 高三下数学期末</span>
-          </label>
-          <input
-            type="text"
-            value={examDescription}
-            onChange={(e) => setExamDescription(e.target.value)}
-            placeholder="如：高三下数学期末"
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent outline-none"
-          />
-        </div>
-      )}
+      {/* Exam Description */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          考试描述 <span className="text-gray-400 text-xs">选填，仅影响真题试卷链接参数</span>
+        </label>
+        <input
+          type="text"
+          value={examDescription}
+          onChange={(e) => setExamDescription(e.target.value)}
+          placeholder="如：高三下数学期末"
+          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent outline-none"
+        />
+      </div>
 
-      {/* Per-audience capability */}
+      {/* Audiences */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
-          推送人群 & 推广能力 <span className="text-red-500">*</span>
+          推送人群 <span className="text-red-500">*</span>
         </label>
-        <div className="space-y-2">
-          {audiences.map((aud) => {
-            const isChecked = selectedAudienceIds.includes(aud.id);
-            return (
-              <div
-                key={aud.id}
-                className={`rounded-lg border transition-colors ${
-                  isChecked ? 'border-[var(--color-primary)] bg-blue-50' : 'border-gray-200'
-                }`}
-              >
-                <div className="flex items-center gap-2 px-3 py-2">
+
+        {k12Auds.length > 0 && (
+          <div className="mb-3">
+            <span className="text-[10px] text-gray-400 uppercase tracking-wide">K12 · 全部能力（真题占50%）</span>
+            <div className="space-y-1 mt-1">
+              {k12Auds.map((aud) => (
+                <label
+                  key={aud.id}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-lg border cursor-pointer transition-colors ${
+                    selectedAudienceIds.includes(aud.id)
+                      ? 'border-[var(--color-primary)] bg-blue-50'
+                      : 'border-gray-200 hover:bg-gray-50'
+                  }`}
+                >
                   <input
                     type="checkbox"
-                    checked={isChecked}
+                    checked={selectedAudienceIds.includes(aud.id)}
                     onChange={() => toggleAudience(aud.id)}
                     className="rounded text-[var(--color-primary)]"
                   />
-                  <div className="flex-1 min-w-0">
-                    <span className="text-sm">{aud.name}</span>
-                    {aud.context && (
-                      <p className="text-[10px] text-gray-400 truncate">{aud.context}</p>
-                    )}
-                  </div>
-                  {isChecked && (
-                    <select
-                      value={audienceCapabilityMap[aud.id] || ''}
-                      onChange={(e) => setAudienceCapability(aud.id, e.target.value)}
-                      className="text-xs border border-gray-300 rounded px-2 py-1 outline-none focus:border-[var(--color-primary)]"
-                    >
-                      <option value="">选择能力</option>
-                      {capabilities.map((cap) => (
-                        <option key={cap.id} value={cap.id}>{cap.name}</option>
-                      ))}
-                    </select>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
+                  <span className="text-sm">{aud.name}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {adultAuds.length > 0 && (
+          <div>
+            <span className="text-[10px] text-gray-400 uppercase tracking-wide">成人 · 仅工具类能力</span>
+            <div className="space-y-1 mt-1">
+              {adultAuds.map((aud) => (
+                <label
+                  key={aud.id}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-lg border cursor-pointer transition-colors ${
+                    selectedAudienceIds.includes(aud.id)
+                      ? 'border-[var(--color-primary)] bg-blue-50'
+                      : 'border-gray-200 hover:bg-gray-50'
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={selectedAudienceIds.includes(aud.id)}
+                    onChange={() => toggleAudience(aud.id)}
+                    className="rounded text-[var(--color-primary)]"
+                  />
+                  <span className="text-sm">{aud.name}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -23,6 +23,7 @@ interface PushState {
   setAudienceIds: (ids: string[]) => void;
   setExamDescription: (desc: string) => void;
   generateAll: () => Promise<void>;
+  regenerateAllWithFeedback: (feedback: string) => Promise<void>;
   regenerateItem: (itemId: string) => Promise<void>;
   updateItem: (itemId: string, changes: Partial<PushItem>) => void;
   changeItemCapability: (itemId: string, newCapabilityId: string, newCapabilityName: string) => Promise<void>;
@@ -74,7 +75,6 @@ export const usePushStore = create<PushState>((set, get) => ({
           push_type_id: uiState.activeTab,
           month: state.selectedMonth,
           custom_node: state.customNode,
-          audience_capability_map: state.audienceCapabilityMap,
           audience_ids: state.selectedAudienceIds,
           exam_description: state.examDescription,
         }),
@@ -90,6 +90,42 @@ export const usePushStore = create<PushState>((set, get) => ({
     } catch (err) {
       console.error('Generate failed:', err);
       alert('生成失败，请检查网络连接和 API 配置');
+    } finally {
+      useUIStore.getState().setIsGenerating(false);
+    }
+  },
+
+  regenerateAllWithFeedback: async (feedback) => {
+    const state = get();
+    const { useUIStore } = await import('./useUIStore');
+    const uiState = useUIStore.getState();
+
+    useUIStore.getState().setIsGenerating(true);
+
+    try {
+      const res = await fetch('/api/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          push_type_id: uiState.activeTab,
+          month: state.selectedMonth,
+          custom_node: state.customNode,
+          audience_ids: state.selectedAudienceIds,
+          exam_description: state.examDescription,
+          feedback,
+        }),
+      });
+
+      const data = await res.json();
+      if (data.error) {
+        alert('重新生成失败：' + data.error);
+      } else {
+        const items: PushItem[] = data.items || [];
+        set({ pushItems: items, dayGroups: groupByDate(items) });
+      }
+    } catch (err) {
+      console.error('Regenerate failed:', err);
+      alert('重新生成失败');
     } finally {
       useUIStore.getState().setIsGenerating(false);
     }

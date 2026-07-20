@@ -1,27 +1,27 @@
 'use client';
 
+import { useState } from 'react';
 import { usePushStore } from '@/stores/usePushStore';
 import { useUIStore } from '@/stores/useUIStore';
 import { PushItemCard } from './PushItemCard';
 
 export function EditorPanel() {
   const {
-    dayGroups, pushItems, generateAll,
-    audienceCapabilityMap, selectedAudienceIds,
-    selectedMonth,
+    dayGroups, pushItems, generateAll, regenerateAllWithFeedback,
+    selectedAudienceIds, selectedMonth,
   } = usePushStore();
 
   const isGenerating = useUIStore((s) => s.isGenerating);
   const selectedPushItemId = useUIStore((s) => s.selectedPushItemId);
   const setSelectedPushItemId = useUIStore((s) => s.setSelectedPushItemId);
 
+  const [feedback, setFeedback] = useState('');
+
   // Count days in selected month
   const [y, m] = selectedMonth.split('-').map(Number);
   const daysInMonth = y && m ? new Date(y, m, 0).getDate() : 30;
 
-  // Can generate if at least one audience has a capability assigned
-  const hasCapability = selectedAudienceIds.some(id => audienceCapabilityMap[id]);
-  const canGenerate = hasCapability && selectedAudienceIds.length > 0 && selectedMonth;
+  const canGenerate = selectedAudienceIds.length > 0 && selectedMonth;
 
   const handleExport = async (format: 'csv' | 'xlsx') => {
     if (pushItems.length === 0) return;
@@ -80,6 +80,41 @@ export function EditorPanel() {
           </button>
         </div>
       </div>
+
+      {/* Feedback bar - only after generation */}
+      {pushItems.length > 0 && (
+        <div className="bg-white rounded-xl border border-[var(--color-border)] p-3 flex items-center gap-3">
+          <input
+            type="text"
+            value={feedback}
+            onChange={(e) => setFeedback(e.target.value)}
+            placeholder="反馈修改意见，如：大学生文案太幼稚、多强调紧迫感、减少emoji..."
+            className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-[var(--color-primary)]"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && feedback.trim()) {
+                regenerateAllWithFeedback(feedback.trim());
+                setFeedback('');
+              }
+            }}
+          />
+          <button
+            onClick={() => {
+              if (feedback.trim()) {
+                regenerateAllWithFeedback(feedback.trim());
+                setFeedback('');
+              }
+            }}
+            disabled={!feedback.trim() || isGenerating}
+            className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors flex-shrink-0 ${
+              feedback.trim() && !isGenerating
+                ? 'bg-[var(--color-warning)] text-white hover:bg-amber-600'
+                : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+            }`}
+          >
+            {isGenerating ? '修改中...' : '根据反馈重新生成'}
+          </button>
+        </div>
+      )}
 
       {/* Empty state */}
       {pushItems.length === 0 && !isGenerating && (
